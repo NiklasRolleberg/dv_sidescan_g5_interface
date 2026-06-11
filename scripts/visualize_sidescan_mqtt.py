@@ -143,8 +143,8 @@ def main():
     client = mqtt.Client()
     client.on_message = draw
 
-    client.username_pw_set("", "")
-    client.connect("", "")       
+    client.username_pw_set("", "") # adding here username, password 
+    client.connect("", )       # adding here host, port
     client.subscribe("evolo/unit/surface/simulation/smarc_evolo/sensor/sidescan")      
     client.loop_start()                        
 
