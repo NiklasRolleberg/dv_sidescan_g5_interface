@@ -155,7 +155,7 @@ class sss_decoder:
     def start_sonar(self, range, frequency=None, chirp=None):
         self._set_regG5(0x02, 0)  #200kHz, Short pulse
         self._set_regG5(0x01, range)  # xm range
-        self.sss_message.range = range
+        self.sss_message.max_duration = range / 1500.0
         #self.file_writer = DVSFileWriter(log_dir="/tmp", range=range)
 
     def stop_sonar(self):

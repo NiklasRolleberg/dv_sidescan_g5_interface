@@ -28,7 +28,7 @@ from scipy import interpolate
 from matplotlib import cm
 
 # ────────────────────────────────────────────────────────────────────────
-MQTT_TOPIC   = "evolo/unit/surface/simulation/smarc_evolo/sensor/sidescan"
+MQTT_TOPIC   = "evolo/unit/surface/real/evolo_evolo/sensor/sidescan"
 ECHO_RES     = 1000
 HISTORY_SIZE = 1000
 COLORMAPS    = ["copper", "jet", "hot", "inferno", "viridis", "gray", "plasma"]
@@ -315,7 +315,7 @@ def draw_ui(surface, sw, sh):
 # ────────────────────────────────────────────────────────────────────────
 def _draw_help(surface, sw, sh):
     lines  = [l.strip() for l in __doc__.strip().splitlines() if l.strip()]
-    pw, ph = 480, len(lines) * 20 + 24
+    pw, ph = 640, len(lines) * 20 + 24
     px, py = (sw - pw) // 2, (sh - ph) // 2
     panel  = pygame.Surface((pw, ph), pygame.SRCALPHA)
     panel.fill((10, 10, 10, 215))

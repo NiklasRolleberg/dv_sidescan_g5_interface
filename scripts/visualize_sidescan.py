@@ -137,7 +137,7 @@ def main(args=None, namespace=None):
     rclpy.init(args=args)
     _node = Node('sidescan_visualizer')
 
-    _node.declare_parameter('topic', "payload/sidescan")
+    _node.declare_parameter('topic', "/evolo/sensors/sidescan")
     topic = _node.get_parameter('topic').value
 
     subsciber = _node.create_subscription(Sidescan, topic, draw, 10)
