@@ -152,8 +152,40 @@ class sss_decoder:
         send_data += struct.pack('>H', value)  #value
         self.sock.sendto(send_data, (self.sonar_ip, self.sonar_port))
 
-    def start_sonar(self, range, frequency=None, chirp=None):
-        self._set_regG5(0x02, 0)  #200kHz, Short pulse
+    def start_sonar(self, range, frequency_setting=None, pulse_setting=None):
+
+        #Frequency
+        if(frequency_setting == 340):
+            frequency_bits = 0x01
+            self.sss_message.frequency_id = 34
+            print("\tFrequency: 340khz")
+        elif(frequency_setting == 670):
+            frequency_bits = 0x02
+            self.sss_message.frequency_id = 67
+            print("\tFrequency: 670khz")
+        else:
+            frequency_bits = 0x00 #Default 200Khz
+            self.sss_message.frequency_id = 20
+            print("\tFrequency: 200khz")
+
+        if pulse_setting == 2: #medium pulse
+            pulse_bits = 0x01
+            print("\tMedium pulse length")
+        elif pulse_setting == 3: #long pulse
+            pulse_bits = 0x02
+            print("\tLong pulse length")
+        elif pulse_setting == 4: #extra long pulse
+            pulse_bits = 0x03
+            print("\tExtra long pulse length")
+        else: #Short pulse (default)
+            pulse_bits = 0x00
+            print("\tShort pulse length")
+
+        #Frequency and pulse bits
+        reg2_bits = frequency_bits | (pulse_bits << 2)
+        print("Reg2 bits:" + bin(reg2_bits))
+
+        self._set_regG5(0x02, reg2_bits)
         self._set_regG5(0x01, range)  # xm range
         self.sss_message.max_duration = range / 1500.0
         #self.file_writer = DVSFileWriter(log_dir="/tmp", range=range)
@@ -180,8 +212,7 @@ class sss_decoder:
                 self.sss_message.starboard_channel = echo
                 self.ch1_received = True
 
-            if (ping_nr == self.current_ping_number
-                ):  #We should have received both channels
+            if (ping_nr == self.current_ping_number): #We should have received both channels
                 if (self.ch0_received and self.ch1_received):
                     self.sonar_pub.publish(self.sss_message)
                     print("published sss message")
@@ -215,8 +246,14 @@ def main(args=None, namespace=None):
     _node.declare_parameter('sidescan_port', 65025)
     sonar_port = _node.get_parameter('sidescan_port').value
 
-    _node.declare_parameter('range', 100)
+    _node.declare_parameter('range', 50)
     sonar_range = _node.get_parameter('range').value
+
+    _node.declare_parameter('frequency', 200)
+    frequency_setting = _node.get_parameter('frequency').value
+
+    _node.declare_parameter('pulse', 0)
+    pulse_setting = _node.get_parameter('pulse').value
 
     _node.declare_parameter('sonar_on', True)
 
@@ -238,21 +275,42 @@ def main(args=None, namespace=None):
     listener.start()
 
     #set up sonars
-    decoder.start_sonar(range=sonar_range)
-    print("Sonar started")
+    decoder.start_sonar(range=sonar_range, frequency_setting=frequency_setting, pulse_setting=pulse_setting)
 
+    current_sonar_on = _node.get_parameter('sonar_on').value
+    current_sonar_range = _node.get_parameter('range').value
+    current_frequency_setting = _node.get_parameter('pulse').value
+    current_pulse_setting = _node.get_parameter('pulse').value
+
+    print("Sonar started")
     while rclpy.ok():
-        rclpy.spin_once(_node)
-        sonar_on = _node.get_parameter('sonar_on').value
-        if not sonar_on:
-            _node.get_logger().info("Stopping DeepVision G5 sidescan sonar!")
-            decoder.stop_sonar()
-        else:
-            sonar_range = _node.get_parameter('range').value
-            _node.get_logger().info(
-                "Starting DeepVision G5 sidescan sonar with range {0}".format(
-                    sonar_range))
-            decoder.start_sonar(range=sonar_range)
+        rclpy.spin_once(_node, timeout_sec=1)
+        new_sonar_on = _node.get_parameter('sonar_on').value
+        new_sonar_range = _node.get_parameter('range').value
+        new_frequency_setting = _node.get_parameter('frequency').value
+        new_pulse_setting = _node.get_parameter('pulse').value
+
+        #Check if any of the parameters has changed
+        if( current_sonar_on != new_sonar_on or
+            current_sonar_range != new_sonar_range or
+            current_frequency_setting != new_frequency_setting or
+            current_pulse_setting != new_pulse_setting):
+            #Some setting has changed
+            if(new_sonar_on == False): #Stop sonar
+                _node.get_logger().info("Stopping sidescan sonar!")
+                decoder.stop_sonar()
+            else: #Start sonar with new settings
+                _node.get_logger().info(
+                    f"Starting DeepVision G5 sidescan sonar with settings:\n"
+                    + f"range: {new_sonar_range}\n"
+                    + f"freqency: {new_frequency_setting}\n"
+                    + f"pulse: {new_pulse_setting}\n\n")
+                decoder.start_sonar(range=new_sonar_range, frequency_setting=new_frequency_setting, pulse_setting=new_pulse_setting)
+
+        current_sonar_on = new_sonar_on
+        current_sonar_range = new_sonar_range
+        current_frequency_setting = new_frequency_setting
+        current_pulse_setting = new_pulse_setting
 
 
     decoder.stop_sonar()
